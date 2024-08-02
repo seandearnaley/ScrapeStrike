@@ -8,18 +8,24 @@ jobs:
   code_review:
     runs-on: ubuntu-latest
     name: AI Code Review
+    outputs:
+      git_diff: ${{ steps.git_diff.outputs.diff }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4.1.2
         with:
           fetch-depth: 0
 
-      - name: List directory contents
-        run: ls -la
+      - name: Fetch main branch
+        run: git fetch origin master:master
 
-      - name: Print working directory
-        run: echo "The working directory is $GITHUB_WORKSPACE"
-        # This step is optional and for debugging purposes.
+      - name: Generate Git Diff
+        id: git_diff
+        run: |
+          git diff -U20 master...HEAD > diff.txt
+          # Base64 encode the diff to safely handle new lines
+          DIFF_OUTPUT=$(base64 -w 0 diff.txt)
+          echo "diff=$DIFF_OUTPUT" >> $GITHUB_OUTPUT
 
       - name: AI Code Review
         uses: seandearnaley/ai-code-reviewer@v1
@@ -27,3 +33,4 @@ jobs:
           openai_api_key: ${{ secrets.OPENAI_API_KEY }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          git_diff: ${{ steps.git_diff.outputs.diff }}
